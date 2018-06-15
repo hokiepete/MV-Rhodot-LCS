@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy.ma as ma
 import numpy as np
 from mpl_toolkits.basemap import Basemap
+import time as tt
 #with hp.File('withwindage.nc','r') as loadfile:
 with hp.File('nowindage.nc','r') as loadfile:
     #print loadfile.keys()
@@ -10,12 +11,16 @@ with hp.File('nowindage.nc','r') as loadfile:
     nlon = loadfile['initial_lon'][:].reshape([320,321])
     nftle = loadfile['FTLE'][:,0,0].reshape([320,321])
     #grad = loadfile['VelocityGradient'][:]
-    #time = loadfile['time'][:]
+    time = loadfile['time'][:]
+#epoch 2017-06-01 00:00:00 UTC    
+tstart = tt.mktime(tt.strptime("01.06.2017 00:00:00", "%d.%m.%Y %H:%M:%S"))
+#print tt.gmtime(tstart)
+print tt.gmtime(time[-1]*24*60*60+tstart)
 nftle[nftle<0]=0
 nftle = ma.masked_where(nftle==999,nftle)
 
 
-with hp.File('largewindage.nc','r') as loadfile:
+with hp.File('nowindage.nc','r') as loadfile:
     #print loadfile.keys()
     llat = loadfile['initial_lat'][:].reshape([320,321])
     llon = loadfile['initial_lon'][:].reshape([320,321])
@@ -55,8 +60,8 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'f',
-            area_thresh=0.,
+            resolution = 'c',
+            area_thresh=1000.,
             )
 m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')
 m.pcolormesh(llon,llat,lftle,latlon=True,vmin=0, vmax=lftle.max(),cmap='Blues')
