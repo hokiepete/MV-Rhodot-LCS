@@ -44,12 +44,34 @@ lat = vars["lat"][:]
 lon = vars["lon"][:]
 latorg = 0.5*(lat[0]+lat[-1])
 lonorg = 0.5*(lon[0]+lon[-1])
+timeo = vars['time'][:]*86400
 #lon, lat = np.meshgrid(lon,lat)
 yy = np.linspace(-23.9,23.9,24)
 xx = np.linspace(-26.2,26.2,26)
 #yy = np.linspace(-99.9,99.9,240)
 #xx = np.linspace(-100.2,100.2,260)
 xx,yy = np.meshgrid(xx,yy)
+
+import time
+import calendar
+tt = calendar.timegm(time.strptime('Jun 1, 2017 @ 00:00:00 UTC', '%b %d, %Y @ %H:%M:%S UTC'))
+tp = timeo[0]+tt
+print tp
+print time.gmtime(tp)
+'''
+time
+shape = (49,)
+dimension[time] = 49
+number of attributes = 6
+attribute[standard_name] = time
+attribute[long_name] = time
+attribute[units] = days since 2017-06-01 00:00:00 UTC
+attribute[calendar] = gregorian
+attribute[_CoordinateAxisType] = Time
+attribute[_FillValue] = 1e+35
+'''
+#print time.gmtime(timeo[0]*86400)#1346114717972/1000.)
+
 
 #plt.scatter(lon,lat,color='r')
 
@@ -64,6 +86,8 @@ lon = vars["longitude"][:]-360
 y = vars["y"][:]
 x = vars["x"][:]
 u = vars["UGRD_10maboveground"][:]
+timew = vars['time'][:]
+print time.gmtime(timew)
 print u.shape
 dim = lat.shape
 #plt.scatter(lon,lat)
@@ -120,7 +144,7 @@ for i in range(dim2[0]):
     for j in range(dim2[1]):
         i
 #uout = uout.T
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 u = np.ma.masked_where(x>xx.max(),u)
 u = np.ma.masked_where(x<xx.min(),u)
 u = np.ma.masked_where(y>yy.max(),u)
