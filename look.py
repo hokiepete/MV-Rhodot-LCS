@@ -1,7 +1,9 @@
 from netCDF4 import Dataset
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import interpolate
+import time
+import calendar
+siavashtime = calendar.timegm(time.strptime('Jun 1, 2017 @ 00:00:00 UTC', '%b %d, %Y @ %H:%M:%S UTC'))
 
 def cot(th):
     return 1.0/np.tan(th)
@@ -35,132 +37,161 @@ def lonlat2km(reflon,reflat,lon,lat ):
     x=p*np.sin(th)
     y=p0-p*np.cos(th)
     return x,y
-
+ncdir = "ncep_nam_20170814_00z/"
 ncfile = "MIT_nsf_alpha200m_surf_vel_2017081200_2017081412_2017081612_01h_r01.nc"
 #ncfile = "nam.t00z.conusnest.hiresf00.tm00.nc"
-root = Dataset(ncfile,'r')
+
+root = Dataset(ncdir+ncfile,'r')
 vars = root.variables
-lat = vars["lat"][:]
-lon = vars["lon"][:]
-latorg = 0.5*(lat[0]+lat[-1])
-lonorg = 0.5*(lon[0]+lon[-1])
-timeo = vars['time'][:]*86400
-#lon, lat = np.meshgrid(lon,lat)
-yy = np.linspace(-23.9,23.9,24)
-xx = np.linspace(-26.2,26.2,26)
-#yy = np.linspace(-99.9,99.9,240)
-#xx = np.linspace(-100.2,100.2,260)
+lato = vars["lat"][:]
+lono = vars["lon"][:]
+seau = vars["East_vel"][:]
+seav = vars["North_vel"][:] 
+latorg = 0.5*(lato[0]+lato[-1])
+lonorg = 0.5*(lono[0]+lono[-1])
+timeo = vars['time'][:]*86400 + siavashtime
+timeout = vars['time'][:]
+root.close()
+
+yy = np.linspace(-23.9,23.9,240)
+xx = np.linspace(-26.2,26.2,263)
 xx,yy = np.meshgrid(xx,yy)
 
-import time
-import calendar
-tt = calendar.timegm(time.strptime('Jun 1, 2017 @ 00:00:00 UTC', '%b %d, %Y @ %H:%M:%S UTC'))
-tp = timeo[0]+tt
-print tp
-print time.gmtime(tp)
-'''
-time
-shape = (49,)
-dimension[time] = 49
-number of attributes = 6
-attribute[standard_name] = time
-attribute[long_name] = time
-attribute[units] = days since 2017-06-01 00:00:00 UTC
-attribute[calendar] = gregorian
-attribute[_CoordinateAxisType] = Time
-attribute[_FillValue] = 1e+35
-'''
-#print time.gmtime(timeo[0]*86400)#1346114717972/1000.)
+windu = np.empty(seau.shape)
+windv = np.empty(seav.shape)
+#print time.gmtime(timew)
+for tt in range(timeo.shape[0]):
+    print tt
+    ncfile = "nam.t00z.conusnest.hiresf{:d}.tm00.nc".format(tt+12)
+    print ncfile
+    root = Dataset(ncdir+ncfile,'r')
+    vars = root.variables
+    lat = vars["latitude"][:]
+    lon = vars["longitude"][:]-360
+    y = vars["y"][:]
+    x = vars["x"][:]
+    u = vars["UGRD_10maboveground"][:].squeeze()
+    v = vars["VGRD_10maboveground"][:].squeeze()
+    timew = vars['time'][:]
+    dim = lat.shape
+    root.close()
+    if timew == timeo[tt]:
+        print True
+        '''
+        ##FIND where to recenter grid
+        tol = 0.013
+        #Find the index of the origin
+        print "want lat lon", latorg, lonorg
+        for i in range(dim[0]):
+            for j in range(dim[1]):
+                #print lat[i,j], lon[i,j]
+                if np.fabs(lat[i,j]-latorg)<tol and np.fabs(lon[i,j]-lonorg)<tol:
+                    print 'closest we can get is', lat[i,j], lon[i,j]
+                    print i,j
+                    iorg = i
+                    jorg = j
+        '''
+        iorg = 740
+        jorg = 1639
+        xorg,yorg= lonlat2km(lonorg,latorg,lon[iorg,jorg],lat[iorg,jorg] )
+        x = (x - x[jorg])/1000 + xorg
+        y = (y - y[iorg])/1000 + yorg
+        x,y = np.meshgrid(x,y)
+        #Domain size
+        gridpointsI = 101
+        gridpointsJ = 103
+        #Calculate start and end points based on 
+        #domain size and origin
+        imin = int(np.floor(gridpointsI/2.0))
+        jmin = int(np.floor(gridpointsJ/2.0))
+        imax = int(np.ceil(gridpointsI/2.0))
+        jmax = int(np.ceil(gridpointsJ/2.0))
+        
+        u = u[(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]
+        v = v[(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]
+        x = x[(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]
+        y = y[(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]
+        f = interpolate.RectBivariateSpline(y[:,0], x[0,:], u)
+        windu[tt,:,:] = f(yy[:,0], xx[0,:])
+        del f
+        f = interpolate.RectBivariateSpline(y[:,0], x[0,:], v)
+        windv[tt,:,:] = f(yy[:,0], xx[0,:])
+        del f
+    else:
+        print False
+        break
+        
 
 
-#plt.scatter(lon,lat,color='r')
+##Write DATA
+dim2 = windu.shape
+dataset = Dataset('windagedata.nc', mode='w', format='NETCDF4_CLASSIC') 
+lat = dataset.createDimension('lat',dim2[1])
+lon = dataset.createDimension('lon',dim2[2])
+time = dataset.createDimension('time', None)
 
-#ncfile = "MIT_nsf_alpha200m_surf_vel_2017081200_2017081412_2017081612_01h_r01.nc"
-ncfile = "nam.t00z.conusnest.hiresf00.tm00.nc"
-root = Dataset(ncfile,'r')
-vars = root.variables
-#keys=vars.keys()
-#gridspacing = 3
-lat = vars["latitude"][:]
-lon = vars["longitude"][:]-360
-y = vars["y"][:]
-x = vars["x"][:]
-u = vars["UGRD_10maboveground"][:]
-timew = vars['time'][:]
-print time.gmtime(timew)
-print u.shape
-dim = lat.shape
-#plt.scatter(lon,lat)
+times = dataset.createVariable('time',np.float64,('time',))
+lats = dataset.createVariable('lat',np.float64,('lat',))
+lons = dataset.createVariable('lon',np.float64,('lon',))
+uo = dataset.createVariable('eastward_vel',np.float64,('time','lat','lon',))
+vo = dataset.createVariable('northward_vel',np.float64,('time','lat','lon',))
+uw = dataset.createVariable('eastward_wind',np.float64,('time','lat','lon',))
+vw = dataset.createVariable('northward_wind',np.float64,('time','lat','lon',)) 
 
-tol = 0.013
-#Find the index of the origin
-print "want lat lon", latorg, lonorg
-for i in range(dim[0]):
-    for j in range(dim[1]):
-        #print lat[i,j], lon[i,j]
-        if np.fabs(lat[i,j]-latorg)<tol and np.fabs(lon[i,j]-lonorg)<tol:
-            print 'closest we can get is', lat[i,j], lon[i,j]
-            print i,j
-            iorg = i
-            jorg = j
+lons.standard_name = 'longitude'
+lons.units = 'degree_east'
+lons.positive = 'east'
+lons._CoordinateAxisType = 'Lon'
+lons.axis = 'X'
+lons.coordsys = 'geographic'
+lons[:] = lono
 
-xorg,yorg= lonlat2km(lonorg,latorg,lon[iorg,jorg],lat[iorg,jorg] )
+lats.standard_name = 'latitude'
+lats.units = 'degree_north'
+lats.positive = 'up'
+lats._CoordinateAxisType = 'Lat'
+lats.axis = 'Y'
+lats.coordsys = 'geographic'
+lats[:] = lato
 
-x = (x - x[jorg])/1000 + xorg
-y = (y - y[iorg])/1000 + yorg
-print x[jorg]
-print y[iorg]
+times.standard_name = 'time'
+times.long_name = 'time'
+times.units = 'days since 2017-06-01 00:00:00 UTC'
+times.calendar = 'gregorian'
+times._CoordinateAxisType = 'Time'
+times[:] = timeo
 
-x,y = np.meshgrid(x,y)
-print x[iorg,jorg]
-print y[iorg,jorg]
+uo.standard_name = 'surface_eastward_sea_water_velocity'
+uo.long_name = 'surface_eastward_sea_water_velocity'
+uo.units = 'meter second-1'
+uo.coordsys = 'geographic'
+uo.positive = 'toward east'
+uo.coordinates = 'Longitude Latitude datetime'
+uo[:] = seau
 
-#Domain size
-gridpointsI = 101
-gridpointsJ = 103
-#Calculate start and end points based on 
-#domain size and origin
-imin = int(np.floor(gridpointsI/2.0))
-jmin = int(np.floor(gridpointsJ/2.0))
-imax = int(np.ceil(gridpointsI/2.0))
-jmax = int(np.ceil(gridpointsJ/2.0))
+vo.standard_name = 'surface_northward_sea_water_velocity'
+vo.long_name = 'surface_northward_sea_water_velocity'
+vo.units = 'meter second-1'
+vo.coordsys = 'geographic'
+vo.positive = 'toward north'
+vo.coordinates = 'Longitude Latitude datetime'
+vo[:] = seav
 
-u = u[0,(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]#.ravel()
-#v = vvar[:,(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]#.ravel()
-x = x[(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]
-y = y[(iorg-imin):(iorg+imax),(jorg-jmin):(jorg+jmax)]
+uw.standard_name = 'eastward_wind'
+uw.long_name = 'eastward_wind'
+uw.units = 'meter second-1'
+uw.coordsys = 'geographic'
+uw.positive = 'toward east'
+uw.coordinates = 'Longitude Latitude datetime'
+uw[:] = windu
 
-#f = interpolate.interp2d(x.ravel(), y.ravel(), u.ravel(), kind='cubic')
-#f = interpolate.interp2d(x, y, u, kind='cubic
-#f = interpolate.RectBivariateSpline(x[0,:], y[:,0], u.T)
-f = interpolate.RectBivariateSpline(y[:,0], x[0,:], u)
+vw.standard_name = 'northward_wind'
+vw.long_name = 'northward_wind'
+vw.units = 'meter second-1'
+vw.coordsys = 'geographic'
+vw.positive = 'toward north'
+vw.coordinates = 'Longitude Latitude datetime'
+vw[:] = windv
 
-#uout = f(xx.ravel(), yy.ravel())
-#uout = f(xx[0,:], yy[:,0])
-uout = f(yy[:,0], xx[0,:])
-dim2 = uout.shape
-
-for i in range(dim2[0]):
-    for j in range(dim2[1]):
-        i
-#uout = uout.T
-#import matplotlib.pyplot as plt
-u = np.ma.masked_where(x>xx.max(),u)
-u = np.ma.masked_where(x<xx.min(),u)
-u = np.ma.masked_where(y>yy.max(),u)
-u = np.ma.masked_where(y<yy.min(),u)
-#x = np.ma.masked_where(x>26.2,x)
-#x = np.ma.masked_where(x<-26.2,x)
-#x = x[x<=26.2]
-#x = x[x>=-26.2]
-#y = y[y<=23.9]
-#y = y[y>=-23.9]
-plt.close('all')
-fig = plt.figure(1)
-ax = plt.pcolormesh(x[0,:], y[:,0],u,vmin=u.min(),vmax=u.max())
-plt.colorbar()
-
-fig = plt.figure(2)
-ax = plt.pcolormesh(xx[0,:], yy[:,0],uout,vmin=u.min(),vmax=u.max())
-plt.colorbar()
+dataset.close()
 
