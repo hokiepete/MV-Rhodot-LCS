@@ -130,13 +130,13 @@ lat = dataset.createDimension('lat',dim2[1])
 lon = dataset.createDimension('lon',dim2[2])
 time = dataset.createDimension('time', None)
 
-times = dataset.createVariable('time',np.float64,('time',))
-lats = dataset.createVariable('lat',np.float64,('lat',))
-lons = dataset.createVariable('lon',np.float64,('lon',))
-uo = dataset.createVariable('eastward_vel',np.float64,('time','lat','lon',))
-vo = dataset.createVariable('northward_vel',np.float64,('time','lat','lon',))
-uw = dataset.createVariable('eastward_wind',np.float64,('time','lat','lon',))
-vw = dataset.createVariable('northward_wind',np.float64,('time','lat','lon',)) 
+times = dataset.createVariable('time',np.float64,('time',),fill_value=999)
+lats = dataset.createVariable('lat',np.float64,('lat',),fill_value=999)
+lons = dataset.createVariable('lon',np.float64,('lon',),fill_value=999)
+uo = dataset.createVariable('eastward_vel',np.float64,('time','lat','lon',),fill_value=999)
+vo = dataset.createVariable('northward_vel',np.float64,('time','lat','lon',),fill_value=999)
+uw = dataset.createVariable('eastward_wind',np.float64,('time','lat','lon',),fill_value=999)
+vw = dataset.createVariable('northward_wind',np.float64,('time','lat','lon',),fill_value=999) 
 
 lons.standard_name = 'longitude'
 lons.units = 'degree_east'
