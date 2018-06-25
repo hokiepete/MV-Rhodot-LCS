@@ -38,7 +38,8 @@ def lonlat2km(reflon,reflat,lon,lat ):
     y=p0-p*np.cos(th)
     return x,y
 ncdir = "ncep_nam_20170814_00z/"
-ncfile = "MIT_nsf_alpha200m_surf_vel_2017081200_2017081412_2017081612_01h_r01.nc"
+#ncfile = "MIT_nsf_alpha200m_surf_vel_2017081200_2017081412_2017081612_01h_r01.nc"
+ncfile = "MIT_nsf_alpha200m_surf_vel_2017081200_2017081300_2017081500_01h.nc"
 #ncfile = "nam.t00z.conusnest.hiresf00.tm00.nc"
 
 root = Dataset(ncdir+ncfile,'r')
@@ -62,7 +63,7 @@ windv = np.empty(seav.shape)
 #print time.gmtime(timew)
 for tt in range(timeo.shape[0]):
     print tt
-    ncfile = "nam.t00z.conusnest.hiresf{:d}.tm00.nc".format(tt+12)
+    ncfile = "nam.t00z.conusnest.hiresf{:02d}.tm00.nc".format(tt)
     print ncfile
     root = Dataset(ncdir+ncfile,'r')
     vars = root.variables
@@ -159,7 +160,7 @@ times.long_name = 'time'
 times.units = 'days since 2017-06-01 00:00:00 UTC'
 times.calendar = 'gregorian'
 times._CoordinateAxisType = 'Time'
-times[:] = timeo
+times[:] = timeout[:]
 
 uo.standard_name = 'surface_eastward_sea_water_velocity'
 uo.long_name = 'surface_eastward_sea_water_velocity'
