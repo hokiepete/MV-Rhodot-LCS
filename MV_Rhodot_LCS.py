@@ -85,15 +85,16 @@ cdict = {'red':  [(0.0, 0.0000, 0.0000),
                   (1.0, 0.0000, 0.0000)]}
 plt.register_cmap(name='CO', data=cdict)
 #from mpl_toolkits.basemap import Basemap
-ncfile="HFR-restord.nc"
+ncfile="windagedata.nc"
 root = Dataset(ncfile,'r') #read the data
 vars = root.variables #dictionary, all variables in dataset\
-t=1120
+print vars.keys()
+t=0
 lat = vars["lat"][:]
 lon = vars["lon"][:]
 time = 86400*vars["time"][:]
-u = vars["East_vel"][t,:,:]
-v = vars["North_vel"][t,:,:]
+u = vars["eastward_vel"][t,:,:]
+v = vars["northward_vel"][t,:,:]
 reflat = 0.5*(max(lat)+min(lat))#midpoint lat
 reflon = 0.5*(max(lon)+min(lon))#midpoint lon
 lon, lat = np.meshgrid(lon,lat)
