@@ -1,32 +1,44 @@
-import h5py as hp
+#import h5py as hp
+from netCDF4 import Dataset
 import matplotlib.pyplot as plt
 import numpy.ma as ma
 import numpy as np
 from mpl_toolkits.basemap import Basemap
-import time as tt
+import time
+import calendar
+tstart = calendar.timegm(time.strptime('Jun 1, 2017 @ 00:00:00 UTC', '%b %d, %Y @ %H:%M:%S UTC'))
+ydim=240
+xdim=263
+timestep=0
 #with hp.File('withwindage.nc','r') as loadfile:
-with hp.File('nowindage.nc','r') as loadfile:
-    #print loadfile.keys()
-    nlat = loadfile['initial_lat'][:].reshape([320,321])
-    nlon = loadfile['initial_lon'][:].reshape([320,321])
-    nftle = loadfile['FTLE'][:,0,0].reshape([320,321])
-    #grad = loadfile['VelocityGradient'][:]
-    time = loadfile['time'][:]
+root = Dataset('MV_FTLE_-6hrs_NoWindage.nc','r')
+loadfile = root.variables
+#print loadfile.keys()
+nlat = loadfile['initial_lat'][:].reshape([ydim,xdim])
+nlon = loadfile['initial_lon'][:].reshape([ydim,xdim])
+nftle = loadfile['FTLE'][:,timestep,0].reshape([ydim,xdim])
+#grad = loadfile['VelocityGradient'][:]
+t = loadfile['time'][:]
+#print loadfile['time'].units
 #epoch 2017-06-01 00:00:00 UTC    
-tstart = tt.mktime(tt.strptime("01.06.2017 00:00:00", "%d.%m.%Y %H:%M:%S"))
+#tstart = tt.mktime(tt.strptime("01.06.2017 00:00:00", "%d.%m.%Y %H:%M:%S")) UTC
+#tstart = tt.mktime(tt.strptime("31.05.2017 22:00:00", "%d.%m.%Y %H:%M:%S"))
 #print tt.gmtime(tstart)
-print tt.gmtime(time[-1]*24*60*60+tstart)
+print time.gmtime(t[0]*24*60*60+tstart)
 nftle[nftle<0]=0
 nftle = ma.masked_where(nftle==999,nftle)
 
 
-with hp.File('nowindage.nc','r') as loadfile:
-    #print loadfile.keys()
-    llat = loadfile['initial_lat'][:].reshape([320,321])
-    llon = loadfile['initial_lon'][:].reshape([320,321])
-    lftle = loadfile['FTLE'][:,0,0].reshape([320,321])
-    #grad = loadfile['VelocityGradient'][:]
-    #time = loadfile['time'][:]
+#with hp.File('MV_FTLE_-6hrs_Windage=0,019.nc','r') as loadfile:
+root = Dataset('MV_FTLE_-6hrs_Windage=0,019.nc','r')
+loadfile = root.variables
+#print loadfile.keys()
+llat = loadfile['initial_lat'][:].reshape([ydim,xdim])
+llon = loadfile['initial_lon'][:].reshape([ydim,xdim])
+lftle = loadfile['FTLE'][:,timestep,0].reshape([ydim,xdim])
+#grad = loadfile['VelocityGradient'][:]
+#time = loadfile['time'][:]
+
 lftle[lftle<0]=0
 lftle = ma.masked_where(lftle==999,lftle)
 
@@ -60,11 +72,12 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'c',
-            area_thresh=1000.,
+            resolution = 'f',
+            area_thresh=0.,
             )
-m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')
+
 m.pcolormesh(llon,llat,lftle,latlon=True,vmin=0, vmax=lftle.max(),cmap='Blues')
+m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')
 #lon, lat = np.meshgrid(lon,lat,indexing='ij')
 #m.pcolormesh(lon,lat,ftle,latlon=True,shading='gourand')
 #m.contourf(lon,lat,ftle,latlon=True,levels=np.linspace(0,ftle.max(),3001))
