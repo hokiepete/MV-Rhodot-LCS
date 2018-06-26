@@ -14,9 +14,9 @@ import numpy as np
 f = open('NC_MetaData.doc', 'w')
 
 #ncfile='wbhf9ezAF24r0wZQHCFZxcqyKHEqwO9z.nc'
-ncdir = "ncep_nam_20170814_00z/"
+ncdir = ""#"ncep_nam_20170814_00z/"
 ncfile = ncdir+"MIT_nsf_alpha200m_surf_vel_2017081200_2017081412_2017081612_01h_r01.nc"
-ncfile = 'windagedata.nc'
+#ncfile = 'windagedata.nc'
 #ncfile="wrfout.nc"
 root = Dataset(ncfile,'r') #read the data
 
