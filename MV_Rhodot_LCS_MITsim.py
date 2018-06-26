@@ -10,12 +10,11 @@ source: https://www.youtube.com/watch?v=mlAuOKD1ff8
 from netCDF4 import Dataset
 import matplotlib.pyplot as plt
 import numpy as np
-#from scipy.interpolate import griddata
-#from scipy.interpolate import interp2d
 from time import gmtime, strftime, strptime
 import matplotlib.ticker as ticker
 from mpl_toolkits.basemap import Basemap
 import calendar
+#import scipy.ndimage.filters as filter
 def cot(th):
     return 1.0/np.tan(th)
 
@@ -73,7 +72,9 @@ def km2lonlat(reflon,reflat,x,y ):
 def fmt(x, pos):
     a, b = '{:.2e}'.format(x).split('e')
     b = int(b)
-    return r'${} \times 10^{{{}}}$'.format(a, b)
+    return r'${} \cdot 10^{{{}}}$'.format(a, b)
+    
+    #return x
 
 cdict = {'red':  [(0.0, 0.0000, 0.0000),
                   (0.5, 1.0000, 1.0000),
@@ -88,6 +89,174 @@ plt.register_cmap(name='CO', data=cdict)
 
 tstart = calendar.timegm(strptime('Jun 1, 2017 @ 00:00:00 UTC', '%b %d, %Y @ %H:%M:%S UTC'))
 
+### GENERATE RHODOT
+ncfile="windagedata.nc"
+root = Dataset(ncfile,'r') #read the data
+vars = root.variables #dictionary, all variables in dataset\
+print vars.keys()
+t=14
+dx=200 #m
+dy=200 #m
+lat = vars["lat"][:]
+lon = vars["lon"][:]
+time = 86400*vars["time"][:]+tstart
+u = vars["eastward_vel"][t,:,:]
+v = vars["northward_vel"][t,:,:]
+reflat = 0.5*(max(lat)+min(lat))#midpoint lat
+reflon = 0.5*(max(lon)+min(lon))#midpoint lon
+ydim = lat.shape[0]
+xdim = lon.shape[0]
+lon, lat = np.meshgrid(lon,lat)
+
+###MIT SIMULATION
+dudy,dudx = np.gradient(u,dy,dx,edge_order=2)
+dvdy,dvdx = np.gradient(v,dy,dx,edge_order=2)
+lon_min = lon.min()
+lon_max = lon.max()
+lat_min = lat.min()
+lat_max = lat.max()
+
+#s1 = np.ma.empty(dim)
+rhodot = np.ma.empty([ydim,xdim])
+J = np.array([[0, 1], [-1, 0]])
+for i in range(ydim):
+    for j in range(xdim):
+        if (dudx[i,j] and dudy[i,j] and dvdx[i,j] and dvdy[i,j] and u[i,j] and v[i,j]) is not np.ma.masked:    
+            Utemp = np.array([u[i, j], v[i, j]])
+            Grad = np.array([[dudx[i, j], dudy[i, j]], [dvdx[i, j], dvdy[i, j]]])
+            S = 0.5*(Grad + np.transpose(Grad))
+            #s1[i,j] = np.min(np.linalg.eig(S)[0])
+            rhodot[i, j] = np.dot(Utemp, np.dot(np.dot(np.transpose(J), np.dot(S, J)), Utemp))/np.dot(Utemp, Utemp)
+        else:
+            rhodot[i,j] = np.ma.masked
+            #s1[i,j] = np.ma.masked
+
+rhodot = 3600*rhodot
+#s1 = 3600*s1
+colorlevel = np.max(np.fabs([rhodot.min(),rhodot.max()]))
+
+### CALCULATE LCS
+athresh=0.38
+rthresh=0.45
+aftlesnap=-3 #-2hr
+rftlesnap= 2 #+2hr
+ncfile = 'MV_FTLE_-6hrs_NoWindage.nc'
+root = Dataset(ncfile,'r') #read the data
+vars = root.variables #dictionary, all variables in dataset\
+aftle = vars['FTLE'][:,aftlesnap,0]
+flon = vars['initial_lon'][:]
+flat = vars['initial_lat'][:]
+ydim = 479
+xdim = 525
+acg = vars['CauchyGreen'][:,aftlesnap,:,:]
+aftle = np.reshape(aftle,[ydim,xdim])/24
+flon = np.reshape(flon,[ydim,xdim])
+flat = np.reshape(flat,[ydim,xdim])
+acg = np.reshape(acg,[ydim,xdim,2,2])
+root.close()
+ncfile = 'MV_FTLE_+6hrs_NoWindage.nc'
+
+root = Dataset(ncfile,'r') #read the data
+vars = root.variables #dictionary, all variables in dataset\
+rftle = vars['FTLE'][:,rftlesnap,0]
+rcg = vars['CauchyGreen'][:,rftlesnap,:,:]
+rftle = np.reshape(rftle,[ydim,xdim])/24
+rcg = np.reshape(rcg,[ydim,xdim,2,2])
+root.close()
+
+adfdy,adfdx = np.gradient(aftle,dy/2.0,dx/2.0,edge_order=2)
+rdfdy,rdfdx = np.gradient(rftle,dy/2.0,dx/2.0,edge_order=2)
+adirdiv = np.ma.empty([ydim,xdim])
+rdirdiv = np.ma.empty([ydim,xdim])
+for i in range(ydim):
+    for j in range(xdim):
+        if (adfdx[i,j] and adfdy[i,j]) is not np.ma.masked:    
+            eigenValues, eigenVectors = np.linalg.eig(acg[i,j,:,:])
+            idx = eigenValues.argsort()[::-1]   
+            eigenVectors = eigenVectors[:,idx]
+            adirdiv[i,j] = np.dot([adfdx[i,j],adfdy[i,j]],eigenVectors[:,0])
+            
+        else:
+            adirdiv[i,j] = np.ma.masked
+        if (rdfdx[i,j] and rdfdy[i,j]) is not np.ma.masked:    
+            eigenValues, eigenVectors = np.linalg.eig(rcg[i,j,:,:])
+            idx = eigenValues.argsort()[::-1]   
+            eigenVectors = eigenVectors[:,idx]
+            rdirdiv[i,j] = np.dot([rdfdx[i,j],rdfdy[i,j]],eigenVectors[:,0])
+            
+        else:
+            rdirdiv[i,j] = np.ma.masked
+
+adirdiv = np.ma.masked_where(aftle<=athresh,adirdiv)
+rdirdiv = np.ma.masked_where(rftle<=rthresh,rdirdiv)
+
+###GENERATE MAP
+plt.close('all')
+m = Basemap(llcrnrlon=lon_min,
+            llcrnrlat=lat_min,
+            urcrnrlon=lon_max,
+            urcrnrlat=lat_max,
+            #lat_0=(lat_max - lat_min)/2,
+            #lon_0=(lon_max-lon_min)/2,
+            projection='merc',
+            resolution = 'f',
+            area_thresh=0.,
+            )
+parallels = np.arange(41.1,lat_max+0.1,0.1)
+meridians = np.arange(-70.2,lon_min-0.1,-0.1)
+
+
+###GENERATE PLOTS
+pltsize = [15,12]
+#pltsize = [5,4]
+fig = plt.figure(1,figsize=pltsize, dpi=150)
+'''
+ax = plt.subplot(221)
+heatmap = m.contourf(flon,flat,rftle,levels=np.linspace(rftle.min(),rftle.max(),301),latlon=True)
+m.drawcoastlines()
+m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+ax.set_aspect('equal', adjustable='box', anchor='C')
+#qiv = ax.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
+cbar = plt.colorbar(heatmap,format=ticker.FuncFormatter(fmt)) 
+plt.title(strftime("+2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
+
+ax = plt.subplot(222)
+heatmap = m.contourf(flon,flat,aftle,levels=np.linspace(aftle.min(),aftle.max(),301),latlon=True)
+m.drawcoastlines()
+m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+ax.set_aspect('equal', adjustable='box', anchor='C')
+#qiv = ax.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
+cbar = plt.colorbar(heatmap,format=ticker.FuncFormatter(fmt)) 
+plt.title(strftime("-2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
+'''
+ax = plt.subplot(111)
+geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
+aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
+rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
+m.drawcoastlines()
+m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+#qiv = ax.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
+plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
+plt.savefig('output1.eps', transparent=True, bbox_inches='tight')
+
+fig = plt.figure(2,figsize=pltsize, dpi=150)
+bx = plt.subplot(111)
+geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
+m.drawcoastlines()
+m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+#uiv = bx.quiver(xx[::2*iterplevl,::2*iterplevl],yy[::2*iterplevl,::2*iterplevl],uu[::2*iterplevl,::2*iterplevl],vv[::2*iterplevl,::2*iterplevl])
+m.streamplot(lon,lat,u,v,linewidth=0.4,density=3,latlon=True)
+plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
+plt.savefig('output2.eps', transparent=True, bbox_inches='tight')
+#uiv = bx.quiver(xx,yy,uu,vv)
+#dbar = plt.colorbar(geatmap,format=ticker.FuncFormatter(fmt))
+
+'''
+##PLOT DIFFERENT FTLEs
 #from mpl_toolkits.basemap import Basemap
 ncfile="windagedata.nc"
 root = Dataset(ncfile,'r') #read the data
@@ -132,8 +301,6 @@ lon_max = lon.max()
 lat_min = lat.min()
 lat_max = lat.max()
 
-#print time.gmtime(t[-1])
-#plt.pcolormesh(lon,lat,win)
 s1 = np.ma.empty(dim)
 A = np.ma.empty(dim)
 J = np.array([[0, 1], [-1, 0]])
@@ -149,31 +316,6 @@ for i in range(dim[0]):
             A[i,j] = np.ma.masked
             s1[i,j] = np.ma.masked
 
-'''
-A = np.empty(dim)
-for t in range(dim[0]):
-    print t
-    dux, duy = np.gradient(u[t,:,:],dx,dy,edge_order=2)
-    dvx, dvy = np.gradient(v[t,:,:],dx,dy,edge_order=2)
-    for i in range(dim[1]):
-        for j in range(dim[2]):
-            Utemp = np.array([u[t, i, j], v[t, i, j]])
-            Grad = np.array([[dux[i, j], duy[i, j]], [dvx[i, j], dvy[i, j]]])
-            S = 0.5*(Grad + np.transpose(Grad))
-            A[t, i, j] = np.dot(Utemp, np.dot(np.dot(np.transpose(J), np.dot(S, J)), Utemp))/np.dot(Utemp, Utemp)
-
-'''
-#tracers = [[-70.4986,41.2375],[-70.5265,41.2208]]
-'''
-tracerinx = [-70.4986,-70.5265]
-traceriny = [41.2375,41.2208]
-ncfile = 'tracerout2.nc'
-root = Dataset(ncfile,'r') #read the data
-#print root
-vars = root.variables #dictionary, all variables in dataset\
-traglon = vars['lon'][:]
-traglat = vars['lat'][:]
-'''
 A = 3600*A
 s1 = 3600*s1
 colormin = A.min()
@@ -188,13 +330,14 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'f',
+            resolution = 'c',
             area_thresh=0.,
             )
 parallels = np.arange(41.1,lat_max+0.1,0.1)
 meridians = np.arange(-70.2,lon_min-0.1,-0.1)
-
-fig = plt.figure(1,figsize=[15,12], dpi=150)
+pltsize = [15,12]
+pltsize = [5,4]
+fig = plt.figure(1,figsize=pltsize, dpi=150)
 ax = plt.subplot(221)
 heatmap = m.contourf(lon,lat,speed,levels=np.linspace(0,1,301),cmap = 'plasma',latlon=True)
 m.drawcoastlines()
@@ -203,11 +346,9 @@ m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 ax.set_aspect('equal', adjustable='box', anchor='C')
 
 cbar = plt.colorbar(heatmap,format=ticker.FuncFormatter(fmt))
-#cbar.set_label('m/s',rotation=270)
 plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
 
 bx = plt.subplot(222)
-#geatmap = bx.pcolormesh(xx,yy,A,vmin=-colorlevel,vmax=colorlevel,cmap = 'CO',shading='gourand')#,levels=np.linspace(-colorlevel,colorlevel,2))#,cmap = 'CO')#,shading='gourand')
 geatmap = m.contourf(lon,lat,A,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5*colorlevel,vmax=0.5*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
@@ -217,7 +358,6 @@ m.streamplot(lon,lat,uu,vv,linewidth=0.4,density=3,latlon=True)
 bx.set_aspect('equal', adjustable='box', anchor='C')
 #uiv = bx.quiver(xx,yy,uu,vv)
 dbar = plt.colorbar(geatmap,format=ticker.FuncFormatter(fmt))
-#dbar.set_label('m/s',rotation=270)
 
 cx = plt.subplot(223)
 featmap = m.contourf(lon,lat,s1,levels=np.linspace(s1.min(),s1.max(),301),latlon=True)#,shading='gourand')
@@ -228,18 +368,10 @@ cx.set_aspect('equal', adjustable='box', anchor='C')
 #wiv = cx.quiver(lon[::2*iterplevl,::2*iterplevl],lat[::2*iterplevl,::2*iterplevl],uu[::2*iterplevl,::2*iterplevl],vv[::2*iterplevl,::2*iterplevl])
 #uiv = bx.quiver(xx,yy,uu,vv)
 ebar = plt.colorbar(featmap,format=ticker.FuncFormatter(fmt))
-
-#ax.scatter(traglon,traglat,color='r',s=15)
-#bx.scatter(traglon,traglat,color='r',s=15)
-#cx.scatter(traglon,traglat,color='r',s=15)
-#ax.scatter(traglon[:,0],traglat[:,0],color='y',s=15)
-#bx.scatter(traglon[:,0],traglat[:,0],color='y',s=15)
-#cx.scatter(traglon[:,0],traglat[:,0],color='y',s=15)
-
 ncfile = 'MV_FTLE_-6hrs_NoWindage.nc'
 root = Dataset(ncfile,'r') #read the data
-#print root
 vars = root.variables #dictionary, all variables in dataset\
+print vars.keys()
 ftle = vars['FTLE'][:]
 flon = vars['initial_lon'][:]
 flat = vars['initial_lat'][:]
@@ -250,21 +382,18 @@ flat = np.reshape(flat,[ydim,xdim])
 
 fig = plt.figure(2,figsize=[15,12], dpi=150)
 ax = plt.subplot(221)
-ftlesnap=-3
+ftlesnap=-3 #-2hr
 heatmap = m.contourf(flon,flat,ftle[:,:,ftlesnap],levels=np.linspace(ftle[:,:,ftlesnap].min(),ftle[:,:,ftlesnap].max(),301),latlon=True)
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 ax.set_aspect('equal', adjustable='box', anchor='C')
-#heatmap = ax.imshow(speed,interpolation='bicubic')#,cmap = 'plasma')
 #qiv = ax.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
 cbar = plt.colorbar(heatmap,format=ticker.FuncFormatter(fmt))
-#cbar.set_label('m/s',rotation=270)
 plt.title(strftime("-2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
 
 bx = plt.subplot(222)
 ftlesnap=-5
-#geatmap = bx.pcolormesh(xx,yy,A,vmin=-colorlevel,vmax=colorlevel,cmap = 'CO',shading='gourand')#,levels=np.linspace(-colorlevel,colorlevel,2))#,cmap = 'CO')#,shading='gourand')
 geatmap = m.contourf(flon,flat,ftle[:,:,ftlesnap],levels=np.linspace(ftle[:,:,ftlesnap].min(),ftle[:,:,ftlesnap].max(),301),latlon=True)#,shading='gourand')
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
@@ -273,7 +402,6 @@ bx.set_aspect('equal', adjustable='box', anchor='C')
 #uiv = bx.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
 #uiv = bx.quiver(xx,yy,uu,vv)
 dbar = plt.colorbar(geatmap,format=ticker.FuncFormatter(fmt))
-#dbar.set_label('m/s',rotation=270)
 plt.title(strftime("-4hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
 
 cx = plt.subplot(223)
@@ -287,15 +415,4 @@ cx.set_aspect('equal', adjustable='box', anchor='C')
 #uiv = bx.quiver(xx,yy,uu,vv)
 ebar = plt.colorbar(featmap,format=ticker.FuncFormatter(fmt))
 plt.title(strftime("-6hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
-#ax.scatter(tracerinx,traceriny,color='r',s=15)
-'''
-ax.scatter(tracerinx,traceriny,color='r',s=15)
-bx.scatter(tracerinx,traceriny,color='r',s=15)
-cx.scatter(tracerinx,traceriny,color='r',s=15)
-ax.scatter(traglon,traglat,color='r',s=15)
-bx.scatter(traglon,traglat,color='r',s=15)
-cx.scatter(traglon,traglat,color='r',s=15)
-ax.scatter(traglon[:,0],traglat[:,0],color='y',s=15)
-bx.scatter(traglon[:,0],traglat[:,0],color='y',s=15)
-cx.scatter(traglon[:,0],traglat[:,0],color='y',s=15)
 '''
