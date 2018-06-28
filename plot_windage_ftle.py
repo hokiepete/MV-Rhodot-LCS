@@ -7,8 +7,8 @@ from mpl_toolkits.basemap import Basemap
 import time
 import calendar
 tstart = calendar.timegm(time.strptime('Jun 1, 2017 @ 00:00:00 UTC', '%b %d, %Y @ %H:%M:%S UTC'))
-ydim=240
-xdim=263
+ydim=(240-1)*2+1
+xdim=(263-1)*2+1
 timestep=0
 #with hp.File('withwindage.nc','r') as loadfile:
 root = Dataset('MV_FTLE_-6hrs_NoWindage.nc','r')
@@ -44,22 +44,25 @@ lftle = ma.masked_where(lftle==999,lftle)
 
 plt.close('all')
 plt.figure(1)
-plt.subplot(221)
+ax=plt.subplot(121)
 plt.title("no windage")
 plt.contourf(nlon,nlat,nftle,levels=np.linspace(0,nftle.max(),301),cmap='viridis')
 plt.colorbar()
-plt.subplot(222)
+ax.set_aspect('equal', adjustable='box', anchor='C')
+ax=plt.subplot(122)
 plt.title("windage = 0.019")
 plt.contourf(llon,llat,lftle,levels=np.linspace(0,lftle.max(),301),cmap='viridis')
+ax.set_aspect('equal', adjustable='box', anchor='C')
 plt.colorbar()
+'''
 plt.subplot(223)
 plt.title("Red: No windage, Blue: windage = 0.019; both fields masked under 3 days^{-1}")
+'''
 nftle = ma.masked_where(nftle<3,nftle)
-plt.pcolormesh(nlon,nlat,nftle,vmin=0, vmax=nftle.max(),cmap='Reds')
+#plt.pcolormesh(nlon,nlat,nftle,vmin=0, vmax=nftle.max(),cmap='Reds')
 lftle = ma.masked_where(lftle<3,lftle)
-plt.pcolormesh(llon,llat,lftle,vmin=0, vmax=lftle.max(),cmap='Blues')
+#plt.pcolormesh(llon,llat,lftle,vmin=0, vmax=lftle.max(),cmap='Blues')
 #plt.colorbar()
-
 plt.figure(2)
 lon_min = llon.min()
 lon_max = llon.max()
@@ -75,9 +78,9 @@ m = Basemap(llcrnrlon=lon_min,
             resolution = 'f',
             area_thresh=0.,
             )
-
-m.pcolormesh(llon,llat,lftle,latlon=True,vmin=0, vmax=lftle.max(),cmap='Blues')
-m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')
+plt.subplot(121)
+m.pcolormesh(llon,llat,lftle,latlon=True,vmin=0, vmax=lftle.max(),cmap='Blues')#,alpha=0.4)
+m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')#,alpha=0.4)
 #lon, lat = np.meshgrid(lon,lat,indexing='ij')
 #m.pcolormesh(lon,lat,ftle,latlon=True,shading='gourand')
 #m.contourf(lon,lat,ftle,latlon=True,levels=np.linspace(0,ftle.max(),3001))
@@ -85,16 +88,37 @@ m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')
 m.drawcoastlines()
 #m.drawrivers()
 #m.drawstates()
-
-#m.drawcountries()
-parallels = np.linspace(lat_min,lat_max,6)
-#parallels = np.arange(lat_min,lat_max,6)
+'''
+parallels = np.arange(41.1,lat_max+0.1,0.1)
+meridians = np.arange(-70.2,lon_min-0.1,-0.1)
+'''
+parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
+meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 # draw meridians
-meridians = np.linspace(lon_min,lon_max,6)
-#meridians = np.arange(lon_min,lon_max,6)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 plt.title("Red: No windage, Blue: windage = 0.019; both fields masked under 3 days^{-1}")
+
+plt.subplot(122)
+m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')#,alpha=0.4)
+m.pcolormesh(llon,llat,lftle,latlon=True,vmin=0, vmax=lftle.max(),cmap='Blues')#,alpha=0.4)
+#lon, lat = np.meshgrid(lon,lat,indexing='ij')
+#m.pcolormesh(lon,lat,ftle,latlon=True,shading='gourand')
+#m.contourf(lon,lat,ftle,latlon=True,levels=np.linspace(0,ftle.max(),3001))
+#plt.colorbar()
+m.drawcoastlines()
+#m.drawrivers()
+#m.drawstates()
+'''
+parallels = np.arange(41.1,lat_max+0.1,0.1)
+meridians = np.arange(-70.2,lon_min-0.1,-0.1)
+'''
+parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
+meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
+m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+# draw meridians
+m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+
 plt.show()
 
 
