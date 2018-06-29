@@ -118,6 +118,7 @@ lat_max = lat.max()
 
 #s1 = np.ma.empty(dim)
 rhodot = np.ma.empty([ydim,xdim])
+nudot = np.ma.empty([ydim,xdim])
 J = np.array([[0, 1], [-1, 0]])
 for i in range(ydim):
     for j in range(xdim):
@@ -127,8 +128,11 @@ for i in range(ydim):
             S = 0.5*(Grad + np.transpose(Grad))
             #s1[i,j] = np.min(np.linalg.eig(S)[0])
             rhodot[i, j] = np.dot(Utemp, np.dot(np.dot(np.transpose(J), np.dot(S, J)), Utemp))/np.dot(Utemp, Utemp)
+            nudot[i, j] = np.dot(Utemp,np.dot(np.trace(S)*np.identity(2) - 2*S, Utemp))/np.dot(Utemp, Utemp)
+
         else:
             rhodot[i,j] = np.ma.masked
+            nudot[i,j] = np.ma.masked
             #s1[i,j] = np.ma.masked
 
 rhodot = 3600*rhodot
@@ -137,7 +141,8 @@ colorlevel = np.max(np.fabs([rhodot.min(),rhodot.max()]))
 
 ### CALCULATE LCS
 athresh=0.38
-rthresh=0.45
+rthresh=0.40
+#rthresh=0.45
 aftlesnap=-3 #-2hr
 rftlesnap= 2 #+2hr
 ncfile = 'MV_FTLE_-6hrs_NoWindage.nc'
@@ -163,33 +168,57 @@ rcg = vars['CauchyGreen'][:,rftlesnap,:,:]
 rftle = np.reshape(rftle,[ydim,xdim])/24
 rcg = np.reshape(rcg,[ydim,xdim,2,2])
 root.close()
-'''
+
 adfdy,adfdx = np.gradient(aftle,dy/2.0,dx/2.0,edge_order=2)
+adfdydy,adfdydx = np.gradient(adfdy,dy/2.0,dx/2.0,edge_order=2)
+adfdxdy,adfdxdx = np.gradient(adfdx,dy/2.0,dx/2.0,edge_order=2)
 rdfdy,rdfdx = np.gradient(rftle,dy/2.0,dx/2.0,edge_order=2)
+rdfdydy,rdfdydx = np.gradient(rdfdy,dy/2.0,dx/2.0,edge_order=2)
+rdfdxdy,rdfdxdx = np.gradient(rdfdx,dy/2.0,dx/2.0,edge_order=2)
+
 adirdiv = np.ma.empty([ydim,xdim])
 rdirdiv = np.ma.empty([ydim,xdim])
+aconcav = np.ma.empty([ydim,xdim])
+rconcav = np.ma.empty([ydim,xdim])
 for i in range(ydim):
     for j in range(xdim):
-        if (adfdx[i,j] and adfdy[i,j]) is not np.ma.masked:    
+        if (adfdx[i,j] and adfdy[i,j] and adfdxdy[i,j] and adfdydy[i,j] and adfdxdx[i,j] and adfdydx[i,j]) is not np.ma.masked:    
             eigenValues, eigenVectors = np.linalg.eig(acg[i,j,:,:])
             idx = eigenValues.argsort()[::-1]   
             eigenVectors = eigenVectors[:,idx]
             adirdiv[i,j] = np.dot([adfdx[i,j],adfdy[i,j]],eigenVectors[:,0])
-            
+            aconcav[i,j] = np.dot(np.dot([[adfdxdx[i,j],adfdxdy[i,j]],[adfdydx[i,j],adfdydy[i,j]]],eigenVectors[:,0]),eigenVectors[:,0])
+        #print aconcav[i,j]
         else:
             adirdiv[i,j] = np.ma.masked
-        if (rdfdx[i,j] and rdfdy[i,j]) is not np.ma.masked:    
+            aconcav[i,j] = np.ma.masked
+
+        if (rdfdx[i,j] and rdfdy[i,j] and rdfdxdy[i,j] and rdfdydy[i,j] and rdfdxdx[i,j] and rdfdydx[i,j]) is not np.ma.masked:    
             eigenValues, eigenVectors = np.linalg.eig(rcg[i,j,:,:])
             idx = eigenValues.argsort()[::-1]   
             eigenVectors = eigenVectors[:,idx]
             rdirdiv[i,j] = np.dot([rdfdx[i,j],rdfdy[i,j]],eigenVectors[:,0])
-            
+            rconcav[i,j] = np.dot(np.dot([[rdfdxdx[i,j],rdfdxdy[i,j]],[rdfdydx[i,j],rdfdydy[i,j]]],eigenVectors[:,0]),eigenVectors[:,0])
         else:
-            rdirdiv[i,j] = np.ma.masked
+           rdirdiv[i,j] = np.ma.masked
+           rconcav[i,j] = np.ma.masked
 
+
+
+adirdiv = np.ma.masked_where(aconcav>0,adirdiv)
 adirdiv = np.ma.masked_where(aftle<=athresh,adirdiv)
+rdrirdiv = np.ma.masked_where(rconcav>0,rdirdiv)
 rdirdiv = np.ma.masked_where(rftle<=rthresh,rdirdiv)
-'''
+#rhodot = np.ma.masked_where(nudot < 0,rhodot)
+rdim = rhodot.shape
+for i in range(rdim[0]):
+    for j in range(rdim[1]):
+        if (rhodot[i,j]>0 and nudot[i,j]>0) or (rhodot[i,j]<0 and nudot[i,j]<0):
+            'nothing'
+            #rhodot = rhodot[(rhodot>0 and nudot>0) or (rhodot<0 and nudot<0)]
+        else:
+            rhodot[i,j] = np.ma.masked
+
 ###GENERATE MAP
 plt.close('all')
 m = Basemap(llcrnrlon=lon_min,
@@ -199,7 +228,7 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'c',
+            resolution = 'f',
             area_thresh=0.,
             )
 parallels = np.arange(41.1,lat_max+0.1,0.1)
@@ -233,8 +262,8 @@ plt.title(strftime("-2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t]
 '''
 ax = plt.subplot(111)
 geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
-#aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
-#rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
+aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
+rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
@@ -242,6 +271,7 @@ m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
 plt.savefig('output1.eps', transparent=True, bbox_inches='tight')
 
+'''
 fig = plt.figure(2,figsize=pltsize, dpi=150)
 bx = plt.subplot(111)
 geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
@@ -254,7 +284,7 @@ plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
 plt.savefig('output2.eps', transparent=True, bbox_inches='tight')
 #uiv = bx.quiver(xx,yy,uu,vv)
 #dbar = plt.colorbar(geatmap,format=ticker.FuncFormatter(fmt))
-
+'''
 '''
 ##PLOT DIFFERENT FTLEs
 #from mpl_toolkits.basemap import Basemap
