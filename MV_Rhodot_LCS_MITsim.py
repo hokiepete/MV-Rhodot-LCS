@@ -163,7 +163,7 @@ rcg = vars['CauchyGreen'][:,rftlesnap,:,:]
 rftle = np.reshape(rftle,[ydim,xdim])/24
 rcg = np.reshape(rcg,[ydim,xdim,2,2])
 root.close()
-
+'''
 adfdy,adfdx = np.gradient(aftle,dy/2.0,dx/2.0,edge_order=2)
 rdfdy,rdfdx = np.gradient(rftle,dy/2.0,dx/2.0,edge_order=2)
 adirdiv = np.ma.empty([ydim,xdim])
@@ -189,7 +189,7 @@ for i in range(ydim):
 
 adirdiv = np.ma.masked_where(aftle<=athresh,adirdiv)
 rdirdiv = np.ma.masked_where(rftle<=rthresh,rdirdiv)
-
+'''
 ###GENERATE MAP
 plt.close('all')
 m = Basemap(llcrnrlon=lon_min,
@@ -199,7 +199,7 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'f',
+            resolution = 'c',
             area_thresh=0.,
             )
 parallels = np.arange(41.1,lat_max+0.1,0.1)
@@ -233,8 +233,8 @@ plt.title(strftime("-2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t]
 '''
 ax = plt.subplot(111)
 geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
-aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
-rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
+#aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
+#rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
