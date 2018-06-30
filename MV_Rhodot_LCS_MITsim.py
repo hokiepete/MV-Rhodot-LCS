@@ -141,7 +141,7 @@ colorlevel = np.max(np.fabs([rhodot.min(),rhodot.max()]))
 
 ### CALCULATE LCS
 athresh=0.38
-rthresh=0.40
+rthresh=0.38#40
 #rthresh=0.45
 aftlesnap=-3 #-2hr
 rftlesnap= 2 #+2hr
@@ -207,7 +207,7 @@ for i in range(ydim):
 
 adirdiv = np.ma.masked_where(aconcav>0,adirdiv)
 adirdiv = np.ma.masked_where(aftle<=athresh,adirdiv)
-rdrirdiv = np.ma.masked_where(rconcav>0,rdirdiv)
+rdirdiv = np.ma.masked_where(rconcav>0,rdirdiv)
 rdirdiv = np.ma.masked_where(rftle<=rthresh,rdirdiv)
 #rhodot = np.ma.masked_where(nudot < 0,rhodot)
 rdim = rhodot.shape
