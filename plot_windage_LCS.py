@@ -88,6 +88,7 @@ wdirdiv = np.ma.masked_where(wftle<=wthresh,wdirdiv)
 
 
 plt.close('all')
+'''
 plt.figure(1)
 ax=plt.subplot(121)
 plt.title("no windage")
@@ -100,15 +101,12 @@ plt.contourf(wlon,wlat,wftle,levels=np.linspace(0,wftle.max(),301),cmap='viridis
 ax.set_aspect('equal', adjustable='box', anchor='C')
 plt.colorbar()
 '''
-plt.subplot(223)
-plt.title("Red: No windage, Blue: windage = 0.019; both fields masked under 3 days^{-1}")
-'''
 nftle = ma.masked_where(nftle<3,nftle)
 #plt.pcolormesh(nlon,nlat,nftle,vmin=0, vmax=nftle.max(),cmap='Reds')
 wftle = ma.masked_where(wftle<3,wftle)
 #plt.pcolormesh(wlon,wlat,wftle,vmin=0, vmax=wftle.max(),cmap='Blues')
 #plt.colorbar()
-plt.figure(2)
+
 lon_min = wlon.min()
 lon_max = wlon.max()
 lat_min = wlat.min()
@@ -120,9 +118,11 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'f',
-            area_thresh=0.,
+            resolution = 'c',
+            area_thresh=10000.,
             )
+'''
+plt.figure(2)
 plt.subplot(121)
 m.pcolormesh(wlon,wlat,wftle,latlon=True,vmin=0, vmax=wftle.max(),cmap='Blues')#,alpha=0.4)
 m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')#,alpha=0.4)
@@ -133,10 +133,6 @@ m.pcolormesh(nlon,nlat,nftle,latlon=True,vmin=0, vmax=nftle.max(),cmap='Reds')#,
 m.drawcoastlines()
 #m.drawrivers()
 #m.drawstates()
-'''
-parallels = np.arange(41.1,lat_max+0.1,0.1)
-meridians = np.arange(-70.2,lon_min-0.1,-0.1)
-'''
 parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
 meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
@@ -154,25 +150,20 @@ m.pcolormesh(wlon,wlat,wftle,latlon=True,vmin=0, vmax=wftle.max(),cmap='Blues')#
 m.drawcoastlines()
 #m.drawrivers()
 #m.drawstates()
-'''
-parallels = np.arange(41.1,lat_max+0.1,0.1)
-meridians = np.arange(-70.2,lon_min-0.1,-0.1)
-'''
 parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
 meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 # draw meridians
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+'''
 
-plt.figure(3)
+'''
+plt.figure(1)
 plt.subplot(111)
 nridge = m.contour(nlon,nlat,ndirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
 wridge = m.contour(wlon,wlat,wdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
 m.drawcoastlines()
-'''
-parallels = np.arange(41.1,lat_max+0.1,0.1)
-meridians = np.arange(-70.2,lon_min-0.1,-0.1)
-'''
+
 parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
 meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
@@ -183,11 +174,21 @@ def format_coord(x, y):
     return 'x=%.4f, y=%.4f'%(m(x, y, inverse = True))
 ax.format_coord = format_coord
 plt.show()
+'''
+
+nridge = m.contour(nlon,nlat,ndirdiv,levels =[0],latlon=True)
 
 
-'''
-plt.subplot(224)
-plt.title("windage = 0.19")
-plt.pcolor(glon,glat,gftle,vmin=0,cmap='viridis')
-plt.colorbar()
-'''
+
+
+
+
+
+
+
+
+
+
+
+
+
