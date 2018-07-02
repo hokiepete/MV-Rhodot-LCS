@@ -14,34 +14,27 @@ dx = 200
 dy = 200
 nthresh = 3
 wthresh = 4
-#with hp.File('withwindage.nc','r') as londfile:
+nthresh = 5
+wthresh = 5
 root = Dataset('MV_FTLE_-6hrs_NoWindage.nc','r')
 londfile = root.variables
 print londfile.keys()
-#print londfile.keys()
 nlat = londfile['initial_lat'][:].reshape([ydim,xdim])
 nlon = londfile['initial_lon'][:].reshape([ydim,xdim])
 nftle = londfile['FTLE'][:,timestep,0].reshape([ydim,xdim])
 ncg = londfile['CauchyGreen'][:,timestep,:,:].reshape([ydim,xdim,2,2])
-#grad = londfile['VelocityGradient'][:]
 t = londfile['time'][:]
 print time.gmtime(t[0]*24*60*60+tstart)
-#nftle[nftle<0]=0
 nftle = ma.masked_where(nftle==999,nftle)
 
 
-#with hp.File('MV_FTLE_-6hrs_Windage=0,019.nc','r') as londfile:
 root = Dataset('MV_FTLE_-6hrs_Windage=0,019.nc','r')
 londfile = root.variables
-#print londfile.keys()
 wlat = londfile['initial_lat'][:].reshape([ydim,xdim])
 wlon = londfile['initial_lon'][:].reshape([ydim,xdim])
 wftle = londfile['FTLE'][:,timestep,0].reshape([ydim,xdim])
 wcg = londfile['CauchyGreen'][:,timestep,:,:].reshape([ydim,xdim,2,2])
-#grad = londfile['VelocityGradient'][:]
-#time = londfile['time'][:]
 
-#wftle[wftle<0]=0
 wftle = ma.masked_where(wftle==999,wftle)
 
 
@@ -64,7 +57,6 @@ for i in range(ydim):
             eigenVectors = eigenVectors[:,idx]
             ndirdiv[i,j] = np.dot([ndfdx[i,j],ndfdy[i,j]],eigenVectors[:,0])
             nconcav[i,j] = np.dot(np.dot([[ndfdxdx[i,j],ndfdxdy[i,j]],[ndfdydx[i,j],ndfdydy[i,j]]],eigenVectors[:,0]),eigenVectors[:,0])
-        #print nconcav[i,j]
         else:
             ndirdiv[i,j] = np.ma.masked
             nconcav[i,j] = np.ma.masked
@@ -87,25 +79,10 @@ wdirrdiv = np.ma.masked_where(wconcav>0,wdirdiv)
 wdirdiv = np.ma.masked_where(wftle<=wthresh,wdirdiv)
 
 
-plt.close('all')
-'''
-plt.figure(1)
-ax=plt.subplot(121)
-plt.title("no windage")
-plt.contourf(nlon,nlat,nftle,levels=np.linspace(0,nftle.max(),301),cmap='viridis')
-plt.colorbar()
-ax.set_aspect('equal', adjustable='box', anchor='C')
-ax=plt.subplot(122)
-plt.title("windage = 0.019")
-plt.contourf(wlon,wlat,wftle,levels=np.linspace(0,wftle.max(),301),cmap='viridis')
-ax.set_aspect('equal', adjustable='box', anchor='C')
-plt.colorbar()
-'''
-nftle = ma.masked_where(nftle<3,nftle)
-#plt.pcolormesh(nlon,nlat,nftle,vmin=0, vmax=nftle.max(),cmap='Reds')
-wftle = ma.masked_where(wftle<3,wftle)
-#plt.pcolormesh(wlon,wlat,wftle,vmin=0, vmax=wftle.max(),cmap='Blues')
-#plt.colorbar()
+
+
+nftle = ma.masked_where(nftle<nthresh,nftle)
+wftle = ma.masked_where(wftle<wthresh,wftle)
 
 lon_min = wlon.min()
 lon_max = wlon.max()
@@ -118,9 +95,49 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'c',
-            area_thresh=10000.,
+            resolution = 'f',
+            area_thresh=0.,
             )
+
+nridge = m.contour(nlon,nlat,ndirdiv,levels =[0],latlon=True)
+wridge = m.contour(wlon,wlat,wdirdiv,levels =[0],latlon=True)
+
+'''
+npp = nridge.collections[0].get_paths()
+wpp = wridge.collections[0].get_paths()
+nindex = [104,75,31,32,26] #no windage
+windex = [78,54,16,17,10,19] # windage = 0.019
+nv = np.empty([0,2])
+wv = np.empty([0,2])
+plt.close('all')
+for i in range(len(nindex)):
+    if i<3:
+        nv = np.concatenate((nv,list(reversed(npp[nindex[i]].vertices))))
+    else:
+        nv = np.concatenate((nv,npp[nindex[i]].vertices))
+
+for i in range(len(windex)):
+    if i<3:
+        wv = np.concatenate((wv,list(reversed(wpp[windex[i]].vertices))))
+    else:
+        wv = np.concatenate((wv,wpp[windex[i]].vertices))
+        
+nx,ny = m(nv[:,0],nv[:,1],inverse=True)
+wx,wy = m(wv[:,0],wv[:,1],inverse=True)
+m.plot(nx,ny, latlon=True,color='r')
+m.plot(wx,wy, latlon=True,color='b')
+m.drawcoastlines()
+parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
+meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
+m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
+m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
+
+ax = plt.gca()
+def format_coord(x, y):
+    return 'x=%.4f, y=%.4f'%(m(x, y, inverse = True))
+ax.format_coord = format_coord
+plt.show()
+'''
 '''
 plt.figure(2)
 plt.subplot(121)
@@ -160,10 +177,10 @@ m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 '''
 plt.figure(1)
 plt.subplot(111)
+
+m.drawcoastlines()
 nridge = m.contour(nlon,nlat,ndirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
 wridge = m.contour(wlon,wlat,wdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
-m.drawcoastlines()
-
 parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
 meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
@@ -176,7 +193,6 @@ ax.format_coord = format_coord
 plt.show()
 '''
 
-nridge = m.contour(nlon,nlat,ndirdiv,levels =[0],latlon=True)
 
 
 
