@@ -10,8 +10,8 @@ from mpl_toolkits.basemap import Basemap
 #from numpy import genfromtxt
 ndata = np.genfromtxt('nowindage.csv', delimiter=',')
 wdata = np.genfromtxt('windage0,019.csv', delimiter=',')
-
-
+tracers = np.genfromtxt('tracers.csv', delimiter=',')
+plt.close('all')
 lon_min = -70.916465753
 lon_max = -70.2909317079
 lat_min = 41.0250244184
@@ -30,6 +30,7 @@ m = Basemap(llcrnrlon=lon_min,
 
 m.plot(ndata[:,0],ndata[:,1], latlon=True,color='r')
 m.plot(wdata[:,0],wdata[:,1], latlon=True,color='b')
+m.scatter(tracers[:,0],tracers[:,1], latlon=True)
 m.drawcoastlines()
 parallels = np.arange(round(lat_min,1),lat_max+0.1,0.1)
 meridians = np.arange(round(lon_max,1),lon_min-0.1,-0.1)
