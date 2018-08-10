@@ -24,7 +24,7 @@ t = loadfile['time'][:]
 #tstart = tt.mktime(tt.strptime("01.06.2017 00:00:00", "%d.%m.%Y %H:%M:%S")) UTC
 #tstart = tt.mktime(tt.strptime("31.05.2017 22:00:00", "%d.%m.%Y %H:%M:%S"))
 #print tt.gmtime(tstart)
-print time.gmtime(t[0]*24*60*60+tstart)
+print(time.gmtime(t[0]*24*60*60+tstart))
 nftle[nftle<0]=0
 nftle = ma.masked_where(nftle==999,nftle)
 

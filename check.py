@@ -8,5 +8,5 @@ Created on Mon Jun 25 12:46:40 2018
 from netCDF4 import Dataset
 root = Dataset('windagedata.nc','r')
 vars = root.variables
-t = vars['time'][:]
+print(vars.keys())
 root.close()
