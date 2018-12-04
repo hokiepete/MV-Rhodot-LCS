@@ -244,8 +244,8 @@ meridians = np.arange(-70.2,lon_min-0.1,-0.1)
 ###GENERATE PLOTS
 pltsize = [15,12]
 #pltsize = [5,4]
-fig = plt.figure(1,figsize=pltsize, dpi=150)
 '''
+fig = plt.figure(1,figsize=pltsize, dpi=150)
 ax = plt.subplot(221)
 heatmap = m.contourf(flon,flat,rftle,levels=np.linspace(rftle.min(),rftle.max(),301),latlon=True)
 m.drawcoastlines()
@@ -266,8 +266,12 @@ ax.set_aspect('equal', adjustable='box', anchor='C')
 cbar = plt.colorbar(heatmap,format=ticker.FuncFormatter(fmt)) 
 plt.title(strftime("-2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
 '''
+
+fig = plt.figure(2,figsize=pltsize, dpi=150)
 ax = plt.subplot(111)
 geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
+#geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5,vmax=0.5,cmap = 'CO',latlon=True)#,shading='gourand')
+plt.colorbar()
 aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
 rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
 m.drawcoastlines()
@@ -275,9 +279,10 @@ m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 #qiv = ax.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
 plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
-plt.savefig('output1.eps', transparent=True, bbox_inches='tight')
+plt.savefig('output1_v2.1.eps', transparent=True, bbox_inches='tight')
 
-fig = plt.figure(2,figsize=pltsize, dpi=150)
+'''
+fig = plt.figure(3,figsize=pltsize, dpi=150)
 #m.scatter(lon[153,:],lat[153,:],latlon=True)
 plt.plot(lon[153,:],rhodot[153,:],color='orange')
 plt.plot(flon[306,:],aftle[306,:],color='blue')
@@ -287,21 +292,23 @@ plt.plot(flon[306,:],rftle[306,:],color='red')
 
 #plt.axhline(athresh,color='cyan',linestyle='dashed')
 #plt.axhline(rthresh,color='magenta',linestyle='dashed')
-
 '''
-fig = plt.figure(2,figsize=pltsize, dpi=150)
+
+fig = plt.figure(4,figsize=pltsize, dpi=150)
 bx = plt.subplot(111)
 geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
+#geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5,vmax=0.5,cmap = 'CO',latlon=True)#,shading='gourand')
+plt.colorbar()
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 #uiv = bx.quiver(xx[::2*iterplevl,::2*iterplevl],yy[::2*iterplevl,::2*iterplevl],uu[::2*iterplevl,::2*iterplevl],vv[::2*iterplevl,::2*iterplevl])
-m.streamplot(lon,lat,u,v,linewidth=0.4,density=3,latlon=True,color=(0.74, 0.75, 0.75))
+m.streamplot(lon,lat,u,v,linewidth=0.4,density=1.75,latlon=True,color='dimgrey')#(0.74, 0.75, 0.75))
 plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
-plt.savefig('output2.eps', transparent=True, bbox_inches='tight')
+plt.savefig('output2_v2.1.eps', transparent=True, bbox_inches='tight')
 #uiv = bx.quiver(xx,yy,uu,vv)
 #dbar = plt.colorbar(geatmap,format=ticker.FuncFormatter(fmt))
-'''
+#'''
 '''
 ##PLOT DIFFERENT FTLEs
 #from mpl_toolkits.basemap import Basemap
