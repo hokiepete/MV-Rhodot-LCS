@@ -234,8 +234,8 @@ m = Basemap(llcrnrlon=lon_min,
             #lat_0=(lat_max - lat_min)/2,
             #lon_0=(lon_max-lon_min)/2,
             projection='merc',
-            resolution = 'c',
-            area_thresh=1000.,
+            resolution = 'f',
+            area_thresh=0.,
             )
 parallels = np.arange(41.1,lat_max+0.1,0.1)
 meridians = np.arange(-70.2,lon_min-0.1,-0.1)
@@ -269,8 +269,8 @@ plt.title(strftime("-2hr FTLE @ %a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t]
 
 fig = plt.figure(2,figsize=pltsize, dpi=150)
 ax = plt.subplot(111)
-geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
-#geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5,vmax=0.5,cmap = 'CO',latlon=True)#,shading='gourand')
+#geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
+geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5,vmax=0.5,cmap = 'CO',latlon=True)#,shading='gourand')
 plt.colorbar()
 aridge = m.contour(flon,flat,adirdiv,levels =[0],colors='blue',latlon=True,alpha=0.6)
 rridge = m.contour(flon,flat,rdirdiv,levels =[0],colors='red',latlon=True,alpha=0.6)
@@ -279,7 +279,7 @@ m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
 m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 #qiv = ax.quiver(lon[::2,::2],lat[::2,::2],u[::2,::2],v[::2,::2])
 plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
-plt.savefig('output1_v2.1.eps', transparent=True, bbox_inches='tight')
+plt.savefig('output1_v2.3.eps', transparent=True, bbox_inches='tight')
 
 '''
 fig = plt.figure(3,figsize=pltsize, dpi=150)
@@ -296,8 +296,8 @@ plt.plot(flon[306,:],rftle[306,:],color='red')
 
 fig = plt.figure(4,figsize=pltsize, dpi=150)
 bx = plt.subplot(111)
-geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
-#geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5,vmax=0.5,cmap = 'CO',latlon=True)#,shading='gourand')
+#geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.25*colorlevel,vmax=0.25*colorlevel,cmap = 'CO',latlon=True)#,shading='gourand')
+geatmap = m.contourf(lon,lat,rhodot,levels=np.linspace(-colorlevel,colorlevel,301),vmin=-0.5,vmax=0.5,cmap = 'CO',latlon=True)#,shading='gourand')
 plt.colorbar()
 m.drawcoastlines()
 m.drawparallels(parallels,labels=[1,0,0,0],fontsize=10)
@@ -305,7 +305,7 @@ m.drawmeridians(meridians,labels=[0,0,0,1],fontsize=10)
 #uiv = bx.quiver(xx[::2*iterplevl,::2*iterplevl],yy[::2*iterplevl,::2*iterplevl],uu[::2*iterplevl,::2*iterplevl],vv[::2*iterplevl,::2*iterplevl])
 m.streamplot(lon,lat,u,v,linewidth=0.4,density=1.75,latlon=True,color='dimgrey')#(0.74, 0.75, 0.75))
 plt.title(strftime("%a, %d %b %Y %H:%M:%S Zulu Time", gmtime(time[t])))
-plt.savefig('output2_v2.1.eps', transparent=True, bbox_inches='tight')
+plt.savefig('output2_v2.3.eps', transparent=True, bbox_inches='tight')
 #uiv = bx.quiver(xx,yy,uu,vv)
 #dbar = plt.colorbar(geatmap,format=ticker.FuncFormatter(fmt))
 #'''
